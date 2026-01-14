@@ -1,5 +1,6 @@
-import type { Session, HookPayload, ServerMessage } from "./types.js";
+import type { Session, HookPayload, ServerMessage, SessionInfo } from "./types.js";
 import { SESSION_TIMEOUT_MS, USER_INPUT_TOOLS } from "./types.js";
+import path from "path";
 
 type StateChangeCallback = (message: ServerMessage) => void;
 
@@ -35,12 +36,21 @@ class SessionState {
     const waitingForInput = sessions.filter(
       (s) => s.status === "waiting_for_input"
     ).length;
+
+    // Build session list with project names
+    const sessionList: SessionInfo[] = sessions.map((s) => ({
+      id: s.id,
+      status: s.status,
+      project: s.cwd ? path.basename(s.cwd) : "Unknown",
+    }));
+
     return {
       type: "state",
       blocked: working === 0,
       sessions: sessions.length,
       working,
       waitingForInput,
+      sessionList,
     };
   }
 

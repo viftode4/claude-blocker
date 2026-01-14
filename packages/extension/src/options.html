@@ -52,12 +52,26 @@
           </div>
         </section>
 
+        <!-- Block All Toggle Section -->
+        <section class="toggle-section">
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <h2>Block All Sites</h2>
+              <p class="section-desc">Block every website when Claude Code is idle</p>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="block-all-toggle" />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </section>
+
         <!-- Blocked Sites Section -->
-        <section class="sites-section">
+        <section class="sites-section" id="sites-section">
           <div class="section-header">
             <div class="section-title">
               <h2>Blocked Sites</h2>
-              <p class="section-desc">These sites will be blocked when Claude Code is idle</p>
+              <p class="section-desc" id="sites-desc">These sites will be blocked when Claude Code is idle</p>
             </div>
             <span class="site-count" id="site-count">0</span>
           </div>

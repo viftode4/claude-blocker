@@ -22,6 +22,13 @@ export interface Session {
   cwd?: string;
 }
 
+// Session info sent to extension (serializable)
+export interface SessionInfo {
+  id: string;
+  status: "idle" | "working" | "waiting_for_input";
+  project: string; // Extracted from cwd (just the folder name)
+}
+
 // WebSocket messages from server to extension
 export type ServerMessage =
   | {
@@ -30,6 +37,7 @@ export type ServerMessage =
       sessions: number;
       working: number;
       waitingForInput: number;
+      sessionList: SessionInfo[];
     }
   | { type: "pong" };
 

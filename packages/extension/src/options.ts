@@ -30,9 +30,13 @@ const siteCount = document.getElementById("site-count") as HTMLElement;
 const bypassBtn = document.getElementById("bypass-btn") as HTMLButtonElement;
 const bypassText = document.getElementById("bypass-text") as HTMLElement;
 const bypassStatus = document.getElementById("bypass-status") as HTMLElement;
+const blockAllToggle = document.getElementById("block-all-toggle") as HTMLInputElement;
+const sitesSection = document.getElementById("sites-section") as HTMLElement;
+const sitesDesc = document.getElementById("sites-desc") as HTMLElement;
 
 let bypassCountdown: ReturnType<typeof setInterval> | null = null;
 let currentDomains: string[] = [];
+let blockAllSites = false;
 
 // Load domains from storage
 async function loadDomains(): Promise<string[]> {
@@ -46,6 +50,43 @@ async function loadDomains(): Promise<string[]> {
       }
     });
   });
+}
+
+// Load block all setting from storage
+async function loadBlockAllSetting(): Promise<boolean> {
+  return new Promise((resolve) => {
+    chrome.storage.sync.get(["blockAllSites"], (result) => {
+      resolve(result.blockAllSites === true);
+    });
+  });
+}
+
+// Save block all setting to storage
+async function saveBlockAllSetting(enabled: boolean): Promise<void> {
+  return new Promise((resolve) => {
+    chrome.storage.sync.set({ blockAllSites: enabled }, () => {
+      // Notify all tabs about the change
+      chrome.tabs.query({}, (tabs) => {
+        for (const tab of tabs) {
+          if (tab.id) {
+            chrome.tabs.sendMessage(tab.id, { type: "BLOCK_ALL_UPDATED", enabled }).catch(() => {});
+          }
+        }
+      });
+      resolve();
+    });
+  });
+}
+
+// Update sites section UI based on block all state
+function updateSitesSection(): void {
+  if (blockAllSites) {
+    sitesSection.classList.add("disabled");
+    sitesDesc.textContent = "Disabled — Block All Sites is enabled";
+  } else {
+    sitesSection.classList.remove("disabled");
+    sitesDesc.textContent = "These sites will be blocked when Claude Code is idle";
+  }
 }
 
 // Save domains to storage
@@ -249,6 +290,12 @@ bypassBtn.addEventListener("click", () => {
   });
 });
 
+blockAllToggle.addEventListener("change", async () => {
+  blockAllSites = blockAllToggle.checked;
+  await saveBlockAllSetting(blockAllSites);
+  updateSitesSection();
+});
+
 // Listen for state broadcasts
 chrome.runtime.onMessage.addListener((message) => {
   if (message.type === "STATE") {
@@ -259,6 +306,9 @@ chrome.runtime.onMessage.addListener((message) => {
 // Initialize
 async function init(): Promise<void> {
   currentDomains = await loadDomains();
+  blockAllSites = await loadBlockAllSetting();
+  blockAllToggle.checked = blockAllSites;
+  updateSitesSection();
   renderDomains();
   refreshState();
 }

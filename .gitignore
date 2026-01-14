@@ -30,3 +30,7 @@ coverage/
 
 # Misc
 *.local
+
+# Local tool configs
+.serena/
+.claude/

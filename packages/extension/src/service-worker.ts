@@ -5,6 +5,13 @@ const KEEPALIVE_INTERVAL = 20_000;
 const RECONNECT_BASE_DELAY = 1_000;
 const RECONNECT_MAX_DELAY = 30_000;
 
+// Session info from server
+interface SessionInfo {
+  id: string;
+  status: "idle" | "working" | "waiting_for_input";
+  project: string;
+}
+
 // The actual state - service worker is single source of truth
 interface State {
   serverConnected: boolean;
@@ -12,6 +19,7 @@ interface State {
   working: number;
   waitingForInput: number;
   bypassUntil: number | null;
+  sessionList: SessionInfo[];
 }
 
 const state: State = {
@@ -20,6 +28,7 @@ const state: State = {
   working: 0,
   waitingForInput: 0,
   bypassUntil: null,
+  sessionList: [],
 };
 
 let websocket: WebSocket | null = null;
@@ -49,6 +58,7 @@ function getPublicState() {
     blocked: shouldBlock,
     bypassActive,
     bypassUntil: state.bypassUntil,
+    sessionList: state.sessionList,
   };
 }
 
@@ -87,6 +97,7 @@ function connect() {
           state.sessions = msg.sessions;
           state.working = msg.working;
           state.waitingForInput = msg.waitingForInput ?? 0;
+          state.sessionList = msg.sessionList ?? [];
           broadcast();
         }
       } catch {}

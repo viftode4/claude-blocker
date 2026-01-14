@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
-import { homedir } from "os";
+import { homedir, platform } from "os";
 import { join } from "path";
 import { DEFAULT_PORT } from "@claude-blocker/shared";
 
@@ -8,7 +8,13 @@ interface ClaudeSettings {
   [key: string]: unknown;
 }
 
-const HOOK_COMMAND = `curl -s -X POST http://localhost:${DEFAULT_PORT}/hook -H 'Content-Type: application/json' -d "$(cat)" > /dev/null 2>&1 &`;
+// Platform-specific hook commands
+const UNIX_HOOK_COMMAND = `curl -s -X POST http://localhost:${DEFAULT_PORT}/hook -H 'Content-Type: application/json' -d "$(cat)" > /dev/null 2>&1 &`;
+
+// Windows command using PowerShell to read stdin and POST to the server
+const WINDOWS_HOOK_COMMAND = `powershell -NoProfile -Command "$body=[Console]::In.ReadToEnd();if($body){Invoke-RestMethod -Uri 'http://localhost:${DEFAULT_PORT}/hook' -Method Post -ContentType 'application/json' -Body $body 2>$null}"`;
+
+const HOOK_COMMAND = platform() === "win32" ? WINDOWS_HOOK_COMMAND : UNIX_HOOK_COMMAND;
 
 const HOOKS_CONFIG = {
   UserPromptSubmit: [

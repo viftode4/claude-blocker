@@ -122,6 +122,33 @@ body {
   letter-spacing: 0.5px;
 }
 
+.toggle-overlay-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  background: #1c1c1e;
+  border: none;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: #999;
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-bottom: 8px;
+}
+
+.toggle-overlay-btn:hover {
+  background: #2c2c2e;
+  color: #fff;
+}
+
+.toggle-overlay-btn.hidden {
+  color: #666;
+}
+
 .settings-btn {
   display: flex;
   align-items: center;

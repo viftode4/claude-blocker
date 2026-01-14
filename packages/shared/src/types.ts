@@ -16,14 +16,28 @@ export interface HookPayload {
 // Session state tracked by server
 export interface Session {
   id: string;
-  status: "idle" | "working";
+  status: "idle" | "working" | "waiting_for_input";
   lastActivity: Date;
   cwd?: string;
 }
 
+// Session info sent to extension (serializable)
+export interface SessionInfo {
+  id: string;
+  status: "idle" | "working" | "waiting_for_input";
+  project: string; // Extracted from cwd (just the folder name)
+}
+
 // WebSocket messages from server to extension
 export type ServerMessage =
-  | { type: "state"; blocked: boolean; sessions: number; working: number }
+  | {
+      type: "state";
+      blocked: boolean;
+      sessions: number;
+      working: number;
+      waitingForInput: number;
+      sessionList: SessionInfo[];
+    }
   | { type: "pong" };
 
 // WebSocket messages from extension to server
