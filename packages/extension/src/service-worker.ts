@@ -86,6 +86,8 @@ function connect() {
       console.log("[Claude Blocker] Connected");
       state.serverConnected = true;
       retryCount = 0;
+      // Send immediate ping to register with server and get initial state
+      websocket?.send(JSON.stringify({ type: "ping" }));
       startKeepalive();
       broadcast();
     };

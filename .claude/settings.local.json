@@ -5,7 +5,22 @@
       "Bash(pnpm typecheck:*)",
       "Bash(pnpm run zip:*)",
       "Bash(ls:*)",
-      "Bash(openssl rsa:*)"
+      "Bash(openssl rsa:*)",
+      "Bash(npm run build:*)",
+      "Bash(ccwd -c \"console.log\\(process.argv\\)\")",
+      "Bash(node -e:*)",
+      "Bash(npm link)",
+      "Bash(pnpm run build)",
+      "Bash(dir \"%USERPROFILE%\\\\.claude\\\\projects\" /s /b)",
+      "Bash(findstr:*)",
+      "mcp__context7__resolve-library-id",
+      "WebSearch",
+      "mcp__context7__query-docs",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:kotrotsos.medium.com)",
+      "WebFetch(domain:smartscope.blog)",
+      "mcp__serena__activate_project",
+      "Bash(npx tsc:*)"
     ]
   }
 }

@@ -13,7 +13,9 @@
   },
   "type": "module",
   "bin": {
-    "claude-blocker": "./dist/bin.js"
+    "claude-blocker": "./dist/bin.js",
+    "ccw": "./dist/wrapper.js",
+    "ccwd": "./dist/ccwd.js"
   },
   "main": "./dist/server.js",
   "types": "./dist/server.d.ts",
@@ -27,7 +29,12 @@
   },
   "dependencies": {
     "@claude-blocker/shared": "workspace:*",
+    "dotenv": "^17.2.3",
+    "telegraf": "^4.16.0",
     "ws": "^8.18.0"
+  },
+  "optionalDependencies": {
+    "node-pty": "^1.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

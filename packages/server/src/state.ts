@@ -1,31 +1,57 @@
-import type { Session, HookPayload, ServerMessage, SessionInfo } from "./types.js";
+import type { Session, HookPayload, ServerMessage, SessionInfo, WaitingForInputEvent, SessionEndEvent } from "./types.js";
 import { SESSION_TIMEOUT_MS, USER_INPUT_TOOLS } from "./types.js";
 import path from "path";
+import { EventEmitter } from "events";
+
+export interface SessionStartEvent {
+  sessionId: string;
+  project?: string;
+  transcriptPath?: string;
+}
+
+export interface StateEvents {
+  sessionStart: (event: SessionStartEvent) => void;
+  sessionEnd: (event: SessionEndEvent) => void;
+  waitingForInput: (event: WaitingForInputEvent) => void;
+}
 
 type StateChangeCallback = (message: ServerMessage) => void;
 
-class SessionState {
+class SessionState extends EventEmitter {
   private sessions: Map<string, Session> = new Map();
-  private listeners: Set<StateChangeCallback> = new Set();
+  private stateListeners: Set<StateChangeCallback> = new Set();
   private cleanupInterval: NodeJS.Timeout | null = null;
 
   constructor() {
+    super();
     // Start cleanup interval for stale sessions
     this.cleanupInterval = setInterval(() => {
       this.cleanupStaleSessions();
     }, 30_000); // Check every 30 seconds
   }
 
+  onSessionStart(callback: (event: SessionStartEvent) => void): void {
+    this.on("sessionStart", callback);
+  }
+
+  onSessionEnd(callback: (event: SessionEndEvent) => void): void {
+    this.on("sessionEnd", callback);
+  }
+
+  onWaitingForInput(callback: (event: WaitingForInputEvent) => void): void {
+    this.on("waitingForInput", callback);
+  }
+
   subscribe(callback: StateChangeCallback): () => void {
-    this.listeners.add(callback);
+    this.stateListeners.add(callback);
     // Immediately send current state to new subscriber
     callback(this.getStateMessage());
-    return () => this.listeners.delete(callback);
+    return () => this.stateListeners.delete(callback);
   }
 
   private broadcast(): void {
     const message = this.getStateMessage();
-    for (const listener of this.listeners) {
+    for (const listener of this.stateListeners) {
       listener(message);
     }
   }
@@ -64,13 +90,20 @@ class SessionState {
           status: "idle",
           lastActivity: new Date(),
           cwd: payload.cwd,
+          transcriptPath: payload.transcript_path,
         });
         console.log("Claude Code session connected");
+        this.emit("sessionStart", {
+          sessionId: session_id,
+          project: payload.cwd ? path.basename(payload.cwd) : undefined,
+          transcriptPath: payload.transcript_path,
+        } as SessionStartEvent);
         break;
 
       case "SessionEnd":
         this.sessions.delete(session_id);
         console.log("Claude Code session disconnected");
+        this.emit("sessionEnd", { sessionId: session_id } as SessionEndEvent);
         break;
 
       case "UserPromptSubmit":
@@ -88,6 +121,16 @@ class SessionState {
         if (payload.tool_name && USER_INPUT_TOOLS.includes(payload.tool_name)) {
           toolSession.status = "waiting_for_input";
           toolSession.waitingForInputSince = new Date();
+
+          // Extract question from tool_input and emit event
+          const question = this.extractQuestion(payload.tool_input);
+          const project = payload.cwd ? path.basename(payload.cwd) : undefined;
+          this.emit("waitingForInput", {
+            sessionId: session_id,
+            question,
+            project,
+            toolInput: payload.tool_input, // Pass full tool input for structured options
+          } as WaitingForInputEvent);
         } else if (toolSession.status === "waiting_for_input") {
           // If waiting for input, only reset after 500ms (to ignore immediate tool calls like Edit)
           const elapsed = Date.now() - (toolSession.waitingForInputSince?.getTime() ?? 0);
@@ -135,16 +178,20 @@ class SessionState {
 
   private cleanupStaleSessions(): void {
     const now = Date.now();
-    let removed = 0;
+    const toRemove: string[] = [];
 
     for (const [id, session] of this.sessions) {
       if (now - session.lastActivity.getTime() > SESSION_TIMEOUT_MS) {
-        this.sessions.delete(id);
-        removed++;
+        toRemove.push(id);
       }
     }
 
-    if (removed > 0) {
+    for (const id of toRemove) {
+      this.sessions.delete(id);
+      this.emit("sessionEnd", { sessionId: id } as SessionEndEvent);
+    }
+
+    if (toRemove.length > 0) {
       this.broadcast();
     }
   }
@@ -158,12 +205,32 @@ class SessionState {
     };
   }
 
+  private extractQuestion(toolInput?: Record<string, unknown>): string | undefined {
+    if (!toolInput) return undefined;
+
+    // AskUserQuestion format: { questions: [{ question: "..." }] }
+    if (Array.isArray(toolInput.questions) && toolInput.questions.length > 0) {
+      const firstQuestion = toolInput.questions[0] as { question?: string };
+      if (firstQuestion?.question) {
+        return firstQuestion.question;
+      }
+    }
+
+    // Fallback: check for direct question field
+    if (typeof toolInput.question === "string") {
+      return toolInput.question;
+    }
+
+    return undefined;
+  }
+
   destroy(): void {
     if (this.cleanupInterval) {
       clearInterval(this.cleanupInterval);
     }
     this.sessions.clear();
-    this.listeners.clear();
+    this.stateListeners.clear();
+    this.removeAllListeners();
   }
 }
 
