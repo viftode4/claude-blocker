@@ -199,23 +199,26 @@ async function main(): Promise<void> {
   // Claude command configuration
   const CLAUDE_COMMAND = process.env.CLAUDE_COMMAND || "claude";
 
-  // Telegram configuration - enabled by default
-  const DEFAULT_BOT_TOKEN = "8330508727:AAH4Ddqc15qURr-Hln-pqjwOSyscuAefDFM";
-  const DEFAULT_CHAT_ID = "6274965354";
-
+  // Telegram configuration - requires TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID env vars
   let telegram: TelegramConfig | undefined;
   if (!args.includes("--no-telegram")) {
-    const botToken = process.env.TELEGRAM_BOT_TOKEN || DEFAULT_BOT_TOKEN;
-    const chatId = process.env.TELEGRAM_CHAT_ID || DEFAULT_CHAT_ID;
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_CHAT_ID;
 
-    // Parse tmux session name
-    let tmuxSession: string | undefined;
-    const tmuxIndex = args.indexOf("--tmux-session");
-    if (tmuxIndex !== -1 && args[tmuxIndex + 1]) {
-      tmuxSession = args[tmuxIndex + 1];
+    if (!botToken || !chatId) {
+      console.log(
+        "Telegram disabled: set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID env vars to enable (see .env.example)"
+      );
+    } else {
+      // Parse tmux session name
+      let tmuxSession: string | undefined;
+      const tmuxIndex = args.indexOf("--tmux-session");
+      if (tmuxIndex !== -1 && args[tmuxIndex + 1]) {
+        tmuxSession = args[tmuxIndex + 1];
+      }
+
+      telegram = { botToken, chatId, tmuxSession };
     }
-
-    telegram = { botToken, chatId, tmuxSession };
   }
 
   // Check if hooks are configured
